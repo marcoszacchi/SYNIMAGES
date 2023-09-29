@@ -3,6 +3,7 @@ import bpy
 from bpy.types import Context
 import numpy as np
 import mathutils
+import os
 
 
 # Painel principal
@@ -16,6 +17,18 @@ class VIEW3D_PT_synthetic_image_generator(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         object = context.object
+
+        layout.separator()
+        row = layout.row()
+        row.prop(context.scene, "import_dir")
+
+        row = layout.row()
+        row.prop(context.scene, "image_dir")
+
+        row = layout.row()
+        row.operator("opr.auto_execute")
+
+        layout.separator()
 
         row = layout.row()
         row.operator("opr.set_object", icon='PREFERENCES')
@@ -65,9 +78,6 @@ class VIEW3D_PT_synthetic_image_generator(bpy.types.Panel):
         layout.separator()
 
         row = layout.row()
-        row.prop(context.scene, "image_dir")
-
-        row = layout.row()
         row.operator("opr.start_render", icon='RESTRICT_RENDER_OFF')
 
 
@@ -99,8 +109,28 @@ class Follow:
         constraint.target = object
 
 
-class Opr_import_object(bpy.types.Operator):
-    
+class Opr_auto_execute(bpy.types.Operator, Select):
+    bl_idname = "opr.auto_execute"
+    bl_label = "Import Object"
+
+
+    def execute(self, context):
+        object_path = context.scene.import_dir
+        print(object_path)
+
+        for file in os.listdir(object_path):
+            if file.endswith(".stl") or file.endswith(".STL"):
+                filepath = os.path.join(object_path, file)
+                bpy.ops.import_mesh.stl(filepath=filepath)
+
+                self.select_object(context)
+                bpy.ops.opr.set_object()
+                bpy.ops.opr.auto_rotate()
+                bpy.ops.opr.start_render()
+                obj = bpy.context.active_object
+                bpy.data.objects.remove(obj, do_unlink=True)
+
+        return {"FINISHED"}
 
 
 # Aplica as orientações do objeto e da camera para um valor padrao
@@ -278,10 +308,10 @@ class Opr_start_render(bpy.types.Operator, Follow, Select):
         rotation_steps = context.scene.rotation_steps
         pic_qnt = round(360 / rotation_steps)
 
-        render_path = context.scene.image_dir
+        image_path = context.scene.image_dir
 
         for pic in range(pic_qnt):
-            context.scene.render.filepath = f'{render_path}/{object.name}/{pic + 1}'
+            context.scene.render.filepath = f'{image_path}/{object.name}/{pic + 1}'
             bpy.ops.render.render(write_still=1)
             camera.location = self.rotateTo(obj_location, cam_location, rotation_steps)
             light.location = camera.location
@@ -295,6 +325,7 @@ def register():
     bpy.utils.register_class(Opr_custom_rotate)
     bpy.utils.register_class(Opr_auto_rotate)
     bpy.utils.register_class(Opr_start_render)
+    bpy.utils.register_class(Opr_auto_execute)
 
     bpy.types.Scene.import_dir = bpy.props.StringProperty(
         name="Import Directory",
@@ -325,6 +356,7 @@ def unregister():
     bpy.utils.unregister_class(Opr_custom_rotate)
     bpy.utils.unregister_class(Opr_auto_rotate)
     bpy.utils.unregister_class(Opr_start_render)
+    bpy.utils.unregister_class(Opr_auto_execute)
 
 
 if __name__ == "__main__":
