@@ -6,6 +6,9 @@ import mathutils
 import os
 
 
+
+#-------------------------------------------------------------------------#
+
 # Painel principal
 class VIEW3D_PT_synthetic_image_generator(bpy.types.Panel):
     bl_label = 'Synthetic Image Generator'
@@ -17,69 +20,105 @@ class VIEW3D_PT_synthetic_image_generator(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         object = context.object
-
-        layout.separator()
-        row = layout.row()
-        row.prop(context.scene, "import_dir")
-
-        row = layout.row()
-        row.prop(context.scene, "image_dir")
-
-        row = layout.row()
-        row.operator("opr.auto_execute")
-
-        layout.separator()
-
-        row = layout.row()
-        row.operator("opr.set_object", icon='PREFERENCES')
+        scene = context.scene
         
-        row = layout.row()
-        col1 = row.column(align=True)
-        col1.scale_x = 0.9
-        op_xp = col1.operator("opr.custom_rotate", text="X+", icon='FILE_REFRESH')
-        op_xp.axis = 'X'
-        op_xp.angle = np.deg2rad(5)
-        op_yp = col1.operator("opr.custom_rotate", text="Y+", icon='FILE_REFRESH')
-        op_yp.axis = 'Y'
-        op_yp.angle = np.deg2rad(5)
-        op_zp = col1.operator("opr.custom_rotate", text="Z+", icon='FILE_REFRESH')
-        op_zp.axis = 'Z'
-        op_zp.angle = np.deg2rad(5)
+        box1 = layout.box()
+
+        icon = 'TRIA_DOWN' if scene.auto_exec else 'TRIA_RIGHT'
+        row1 = box1.row()
+        row1.prop(scene, "auto_exec", text="Generate from Directory", icon=icon, emboss=False)
+
+        if scene.auto_exec:
+            
+            row = box1.row()
+            row.label(text="Files Path", icon='FOLDER_REDIRECT')
+            row = box1.row()
+            row.prop(context.scene, "import_dir")
+
+            row = box1.row()
+
+            row = box1.row()
+            row.label(text="Images Path", icon='FOLDER_REDIRECT')
+            row = box1.row()
+            row.prop(context.scene, "image_dir")
+
+            row = box1.row()
+
+            row = box1.row()
+            col1 = row.column()
+            col2 = row.column()
+            col1.label(text="Steps", icon='SPHERE')
+            col2.prop(context.scene, "rotation_steps", text="")
+
+            row = box1.row()
+            row.operator("opr.auto_execute")
+            row = box1.row()
         
-        col2 = row.column(align=True)
-        col2.scale_x = 0.9
-        op_xn = col2.operator("opr.custom_rotate", text="X-", icon='FILE_REFRESH')
-        op_xn.axis = 'X'
-        op_xn.angle = np.deg2rad(-5)
-        op_yn = col2.operator("opr.custom_rotate", text="Y-", icon='FILE_REFRESH')
-        op_yn.axis = 'Y'
-        op_yn.angle = np.deg2rad(-5)
-        op_zn = col2.operator("opr.custom_rotate", text="Z-", icon='FILE_REFRESH')
-        op_zn.axis = 'Z'
-        op_zn.angle = np.deg2rad(-5)
 
-        col3 = row.column(align=True)
-        row1 = col3.row()
-        row1.prop(object, "rotation_euler", text="", index=0,)
-        row2 = col3.row()
-        row2.prop(object, "rotation_euler", text="", index=1)
-        row3 = col3.row()
-        row3.prop(object, "rotation_euler", text="", index=2)
+        box2 = layout.box()
 
-        row = layout.row()
-        row.operator("opr.auto_rotate", icon='EVENT_A')
+        icon = 'TRIA_DOWN' if scene.manual_exec else 'TRIA_RIGHT'
+        row2 = box2.row()
+        row2.prop(scene, "manual_exec", text="Generate from File", icon=icon, emboss=False)
 
-        row = layout.row()
-        col1 = row.column()
-        col2 = row.column()
-        col1.label(text="Steps", icon='SPHERE')
-        col2.prop(context.scene, "rotation_steps", text="")
+        if scene.manual_exec:
+            
+            row = box2.row()
+            row.operator("opr.set_object", icon='PREFERENCES')
 
-        layout.separator()
+            row = box2.row()
+            col1 = row.column(align=True)
+            col1.scale_x = 0.9
+            op_xp = col1.operator("opr.custom_rotate", text="X+", icon='FILE_REFRESH')
+            op_xp.axis = 'X'
+            op_xp.angle = np.deg2rad(5)
+            op_yp = col1.operator("opr.custom_rotate", text="Y+", icon='FILE_REFRESH')
+            op_yp.axis = 'Y'
+            op_yp.angle = np.deg2rad(5)
+            op_zp = col1.operator("opr.custom_rotate", text="Z+", icon='FILE_REFRESH')
+            op_zp.axis = 'Z'
+            op_zp.angle = np.deg2rad(5)
+            
+            col2 = row.column(align=True)
+            col2.scale_x = 0.9
+            op_xn = col2.operator("opr.custom_rotate", text="X-", icon='FILE_REFRESH')
+            op_xn.axis = 'X'
+            op_xn.angle = np.deg2rad(-5)
+            op_yn = col2.operator("opr.custom_rotate", text="Y-", icon='FILE_REFRESH')
+            op_yn.axis = 'Y'
+            op_yn.angle = np.deg2rad(-5)
+            op_zn = col2.operator("opr.custom_rotate", text="Z-", icon='FILE_REFRESH')
+            op_zn.axis = 'Z'
+            op_zn.angle = np.deg2rad(-5)
 
-        row = layout.row()
-        row.operator("opr.start_render", icon='RESTRICT_RENDER_OFF')
+            col3 = row.column(align=True)
+            row1 = col3.row()
+            row1.prop(object, "rotation_euler", text="", index=0,)
+            row2 = col3.row()
+            row2.prop(object, "rotation_euler", text="", index=1)
+            row3 = col3.row()
+            row3.prop(object, "rotation_euler", text="", index=2)
 
+            row = box2.row()
+            row.operator("opr.auto_rotate", icon='EVENT_A')
+
+            row = box2.row()
+
+            row = box2.row()
+            col1 = row.column()
+            col2 = row.column()
+            col1.label(text="Steps", icon='SPHERE')
+            col2.prop(context.scene, "rotation_steps", text="")
+            
+            row = box2.row()
+            row.label(text="Images Path", icon='FOLDER_REDIRECT')
+            row = box2.row()
+            row.prop(context.scene, "image_dir")
+
+            row = box2.row()
+            row.operator("opr.start_render", icon='RESTRICT_RENDER_OFF')
+
+#-------------------------------------------------------------------------#
 
 # Selecionar os objetos da cena
 class Select:
@@ -111,7 +150,7 @@ class Follow:
 
 class Opr_auto_execute(bpy.types.Operator, Select):
     bl_idname = "opr.auto_execute"
-    bl_label = "Import Object"
+    bl_label = "Generate Images"
 
 
     def execute(self, context):
@@ -131,7 +170,8 @@ class Opr_auto_execute(bpy.types.Operator, Select):
                 bpy.data.objects.remove(obj, do_unlink=True)
 
         return {"FINISHED"}
-
+    
+#-------------------------------------------------------------------------#
 
 # Aplica as orientações do objeto e da camera para um valor padrao
 class Opr_set_object(bpy.types.Operator, Select, Follow):
@@ -197,6 +237,7 @@ class Opr_set_object(bpy.types.Operator, Select, Follow):
         camera.data.clip_start = clip_start
         camera.data.clip_end = clip_end
 
+#-------------------------------------------------------------------------#
 
 # Operador para ajustar automaticamente uma orientacao
 class Opr_auto_rotate(bpy.types.Operator, Select):
@@ -243,6 +284,7 @@ class Opr_auto_rotate(bpy.types.Operator, Select):
                 object.rotation_euler.z = rotation_angle
         return {"FINISHED"}
 
+#-------------------------------------------------------------------------#
 
 # Operador para o usuario definir uma rotacao customizada
 class Opr_custom_rotate(bpy.types.Operator, Select):
@@ -275,8 +317,9 @@ class Opr_custom_rotate(bpy.types.Operator, Select):
         elif axis == 'Z':
             object.rotation_euler.z += angle
 
+#-------------------------------------------------------------------------#
 
-
+# Inicia a renderização
 class Opr_start_render(bpy.types.Operator, Follow, Select):
     bl_idname = "opr.start_render"
     bl_label = "Generate Images"
@@ -316,7 +359,8 @@ class Opr_start_render(bpy.types.Operator, Follow, Select):
             camera.location = self.rotateTo(obj_location, cam_location, rotation_steps)
             light.location = camera.location
 
-    
+
+#-------------------------------------------------------------------------#
 
 # Registradores
 def register():
@@ -326,9 +370,12 @@ def register():
     bpy.utils.register_class(Opr_auto_rotate)
     bpy.utils.register_class(Opr_start_render)
     bpy.utils.register_class(Opr_auto_execute)
+    
+    bpy.types.Scene.auto_exec = bpy.props.BoolProperty(default=False)
+    bpy.types.Scene.manual_exec = bpy.props.BoolProperty(default=False)
 
     bpy.types.Scene.import_dir = bpy.props.StringProperty(
-        name="Import Directory",
+        name="",
         description="Directory to import objects",
         default="",
         maxlen=1024,
@@ -336,7 +383,7 @@ def register():
     )
     
     bpy.types.Scene.image_dir = bpy.props.StringProperty(
-        name="Save Directory",
+        name="",
         description="Directory to save images",
         default="SynImages",
         maxlen=1024,
