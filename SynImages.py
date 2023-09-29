@@ -5,7 +5,7 @@ import numpy as np
 import mathutils
 
 
-# Painel
+# Painel principal
 class VIEW3D_PT_synthetic_image_generator(bpy.types.Panel):
     bl_label = 'Synthetic Image Generator'
     bl_idname = 'VIEW3D_PT_synthetic_image_generator'
@@ -15,13 +15,12 @@ class VIEW3D_PT_synthetic_image_generator(bpy.types.Panel):
  
     def draw(self, context):
         layout = self.layout
-
         object = context.object
-        
+
         row = layout.row()
         row.operator("opr.set_object", icon='PREFERENCES')
+        
         row = layout.row()
-
         col1 = row.column(align=True)
         col1.scale_x = 0.9
         op_xp = col1.operator("opr.custom_rotate", text="X+", icon='FILE_REFRESH')
@@ -58,8 +57,16 @@ class VIEW3D_PT_synthetic_image_generator(bpy.types.Panel):
         row.operator("opr.auto_rotate", icon='EVENT_A')
 
         row = layout.row()
-        row.label(text="Steps", icon='SPHERE')
-        row.prop(context.scene, "rotation_steps", text="")
+        col1 = row.column()
+        col2 = row.column()
+        col1.label(text="Steps", icon='SPHERE')
+        col2.prop(context.scene, "rotation_steps", text="")
+
+        layout.separator()
+
+        row = layout.row()
+        row.prop(context.scene, "image_dir")
+
         row = layout.row()
         row.operator("opr.start_render", icon='RESTRICT_RENDER_OFF')
 
@@ -76,16 +83,7 @@ class Select:
             if object.name not in fixed_object_names:
                 object.select_set(True)
                 context.view_layer.objects.active = object
-    
-    def select_camera(self, context):
-        for object in bpy.data.objects:
-            object.select_set(False)
 
-        camera = context.scene.camera
-
-        if camera:
-            camera.select_set(True)
-            context.view_layer.objects.active = camera
 
 class Follow:
     def camera_follow_object(self, context):
@@ -100,6 +98,9 @@ class Follow:
         constraint = light.constraints.new(type='TRACK_TO')
         constraint.target = object
 
+
+class Opr_import_object(bpy.types.Operator):
+    
 
 
 # Aplica as orientações do objeto e da camera para um valor padrao
@@ -248,18 +249,15 @@ class Opr_custom_rotate(bpy.types.Operator, Select):
 
 class Opr_start_render(bpy.types.Operator, Follow, Select):
     bl_idname = "opr.start_render"
-    bl_label = "Start Render"
+    bl_label = "Generate Images"
         
     def execute(self, context):
         self.select_object(context)
-        selected_object = context.object
-        camera = context.scene.camera
         self.set_render(context)
-        self.start_render(context, selected_object, camera)
+        self.start_render(context)
         return {"FINISHED"}
 
     def set_render(self, context):
-        self.camera_follow_object(context)
         context.scene.render.image_settings.file_format = 'PNG'
 
     def rotateTo(self, planet, moon, angle):
@@ -271,14 +269,19 @@ class Opr_start_render(bpy.types.Operator, Follow, Select):
         newPos = (newX + planet[0], newY + planet[1], moon[2])
         return newPos
 
-    def start_render(self, context, selected_object, camera):
-        obj_location = selected_object.location
+    def start_render(self, context):
+        object = context.object
+        camera = context.scene.camera
+        obj_location = object.location
         cam_location = camera.location
-        rotation_steps = context.scene.rotation_steps
         light = bpy.data.objects.get('Light')
+        rotation_steps = context.scene.rotation_steps
         pic_qnt = round(360 / rotation_steps)
+
+        render_path = context.scene.image_dir
+
         for pic in range(pic_qnt):
-            context.scene.render.filepath = f'RenderBlender/{selected_object.name}/{pic + 1}'
+            context.scene.render.filepath = f'{render_path}/{object.name}/{pic + 1}'
             bpy.ops.render.render(write_still=1)
             camera.location = self.rotateTo(obj_location, cam_location, rotation_steps)
             light.location = camera.location
@@ -292,7 +295,23 @@ def register():
     bpy.utils.register_class(Opr_custom_rotate)
     bpy.utils.register_class(Opr_auto_rotate)
     bpy.utils.register_class(Opr_start_render)
+
+    bpy.types.Scene.import_dir = bpy.props.StringProperty(
+        name="Import Directory",
+        description="Directory to import objects",
+        default="",
+        maxlen=1024,
+        subtype='DIR_PATH'
+    )
     
+    bpy.types.Scene.image_dir = bpy.props.StringProperty(
+        name="Save Directory",
+        description="Directory to save images",
+        default="SynImages",
+        maxlen=1024,
+        subtype='DIR_PATH'
+    )
+
     bpy.types.Scene.rotation_steps = bpy.props.IntProperty(
         name="Rotation Steps",
         min=1,
