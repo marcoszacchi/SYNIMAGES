@@ -21,6 +21,19 @@ class VIEW3D_PT_synthetic_image_generator(bpy.types.Panel):
         layout = self.layout
         object = context.object
         scene = context.scene
+
+        box_out = layout.box()
+
+        row = box_out.row()
+        row.label(text="Save images to", icon='FOLDER_REDIRECT')
+        row = box_out.row()
+        row.prop(context.scene, "image_dir")
+
+        row = box_out.row()
+        col1 = row.column()
+        col2 = row.column()
+        col1.label(text="Steps", icon='SPHERE')
+        col2.prop(context.scene, "rotation_steps", text="")
         
         box1 = layout.box()
 
@@ -36,19 +49,6 @@ class VIEW3D_PT_synthetic_image_generator(bpy.types.Panel):
             row.prop(context.scene, "import_dir")
 
             row = box1.row()
-
-            row = box1.row()
-            row.label(text="Images Path", icon='FOLDER_REDIRECT')
-            row = box1.row()
-            row.prop(context.scene, "image_dir")
-
-            row = box1.row()
-
-            row = box1.row()
-            col1 = row.column()
-            col2 = row.column()
-            col1.label(text="Steps", icon='SPHERE')
-            col2.prop(context.scene, "rotation_steps", text="")
 
             row = box1.row()
             row.operator("opr.auto_execute")
@@ -103,20 +103,10 @@ class VIEW3D_PT_synthetic_image_generator(bpy.types.Panel):
             row.operator("opr.auto_rotate", icon='EVENT_A')
 
             row = box2.row()
-
-            row = box2.row()
-            col1 = row.column()
-            col2 = row.column()
-            col1.label(text="Steps", icon='SPHERE')
-            col2.prop(context.scene, "rotation_steps", text="")
-            
-            row = box2.row()
-            row.label(text="Images Path", icon='FOLDER_REDIRECT')
-            row = box2.row()
-            row.prop(context.scene, "image_dir")
-
-            row = box2.row()
             row.operator("opr.start_render", icon='RESTRICT_RENDER_OFF')
+
+
+
 
 #-------------------------------------------------------------------------#
 
@@ -148,6 +138,8 @@ class Follow:
         constraint.target = object
 
 
+#-------------------------------------------------------------------------#
+
 class Opr_auto_execute(bpy.types.Operator, Select):
     bl_idname = "opr.auto_execute"
     bl_label = "Generate Images"
@@ -171,7 +163,6 @@ class Opr_auto_execute(bpy.types.Operator, Select):
 
         return {"FINISHED"}
     
-#-------------------------------------------------------------------------#
 
 # Aplica as orientações do objeto e da camera para um valor padrao
 class Opr_set_object(bpy.types.Operator, Select, Follow):
@@ -381,6 +372,15 @@ def register():
         maxlen=1024,
         subtype='DIR_PATH'
     )
+
+    bpy.types.Scene.file_dir = bpy.props.StringProperty(
+        name="",
+        description="Directory to import single object",
+        default="",
+        maxlen=1024,
+        subtype='DIR_PATH'
+    )
+    
     
     bpy.types.Scene.image_dir = bpy.props.StringProperty(
         name="",
