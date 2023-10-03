@@ -21,20 +21,7 @@ class VIEW3D_PT_synthetic_image_generator(bpy.types.Panel):
         layout = self.layout
         object = context.object
         scene = context.scene
-
-        box_out = layout.box()
-
-        row = box_out.row()
-        row.label(text="Save images to", icon='FOLDER_REDIRECT')
-        row = box_out.row()
-        row.prop(context.scene, "image_dir")
-
-        row = box_out.row()
-        col1 = row.column()
-        col2 = row.column()
-        col1.label(text="Steps", icon='SPHERE')
-        col2.prop(context.scene, "rotation_steps", text="")
-        
+       
         box1 = layout.box()
 
         icon = 'TRIA_DOWN' if scene.auto_exec else 'TRIA_RIGHT'
@@ -104,6 +91,21 @@ class VIEW3D_PT_synthetic_image_generator(bpy.types.Panel):
 
             row = box2.row()
             row.operator("opr.start_render", icon='RESTRICT_RENDER_OFF')
+        
+        box_out = layout.box()
+
+        row = box_out.row()
+        row.label(text="Save images to", icon='FOLDER_REDIRECT')
+        row = box_out.row()
+        row.prop(context.scene, "image_dir")
+
+        row = box_out.row()
+        col1 = row.column()
+        col2 = row.column()
+        col1.label(text="Steps", icon='SPHERE')
+        col2.prop(context.scene, "rotation_steps", text="")
+        
+        
 
 
 
@@ -146,9 +148,14 @@ class Opr_auto_execute(bpy.types.Operator, Select):
 
 
     def execute(self, context):
+        object = bpy.context.active_object
+        bpy.data.objects.remove(object, do_unlink=True)
+        self.auto_import(context)
+        return {"FINISHED"}
+    
+    def auto_import(self, context):
         object_path = context.scene.import_dir
-        print(object_path)
-
+        
         for file in os.listdir(object_path):
             if file.endswith(".stl") or file.endswith(".STL"):
                 filepath = os.path.join(object_path, file)
@@ -158,10 +165,8 @@ class Opr_auto_execute(bpy.types.Operator, Select):
                 bpy.ops.opr.set_object()
                 bpy.ops.opr.auto_rotate()
                 bpy.ops.opr.start_render()
-                obj = bpy.context.active_object
-                bpy.data.objects.remove(obj, do_unlink=True)
-
-        return {"FINISHED"}
+                object = bpy.context.active_object
+                bpy.data.objects.remove(object, do_unlink=True)
     
 
 # Aplica as orientações do objeto e da camera para um valor padrao
