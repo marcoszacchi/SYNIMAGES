@@ -145,6 +145,12 @@ class Follow:
     
 
 class SetObject:
+    def auto_set_object(self, context):
+            self.set_origin(context)
+            self.set_light()
+            self.fit_distance_camera(context)
+            self.auto_rotate(context)
+
     def set_origin(self, context):
         object = context.object
         bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_MASS')
@@ -255,12 +261,10 @@ class Opr_auto_execute(bpy.types.Operator, Select, Follow, SetObject):
                 bpy.ops.import_mesh.stl(filepath=filepath)
 
                 self.select_object(context)
-                self.set_origin(context)
-                self.set_light()
-                self.fit_distance_camera(context)
+                self.select_object(context)
+                self.auto_set_object(context)
                 self.camera_follow_object(context)
                 self.light_follow_object(context)
-                self.auto_rotate(context)
                 bpy.ops.opr.start_render()
                 object = bpy.context.active_object
                 bpy.data.objects.remove(object, do_unlink=True)
@@ -279,12 +283,9 @@ class Opr_import_object(bpy.types.Operator, Select, Follow, SetObject):
             bpy.data.objects.remove(object, do_unlink=True)
         self.manual_import(context)
         self.select_object(context)
-        self.set_origin(context)
-        self.set_light()
-        self.fit_distance_camera(context)
+        self.auto_set_object(context)
         self.camera_follow_object(context)
         self.light_follow_object(context)
-        self.auto_rotate(context)
 
         return {"FINISHED"}
     
