@@ -29,19 +29,14 @@ class VIEW3D_PT_synthetic_image_generator(bpy.types.Panel):
         row1.prop(scene, "auto_exec", text="Generate from Directory", icon=icon, emboss=False)
 
         if scene.auto_exec:
-            
+
             row = box1.row()
             row.label(text="Files Path", icon='FOLDER_REDIRECT')
             row = box1.row()
             row.prop(context.scene, "import_dir")
 
             row = box1.row()
-
-            row = box1.row()
-            row.operator("opr.auto_execute")
-            row = box1.row()
         
-
         box2 = layout.box()
 
         icon = 'TRIA_DOWN' if scene.manual_exec else 'TRIA_RIGHT'
@@ -49,9 +44,14 @@ class VIEW3D_PT_synthetic_image_generator(bpy.types.Panel):
         row2.prop(scene, "manual_exec", text="Generate from File", icon=icon, emboss=False)
 
         if scene.manual_exec:
+
+            row = box2.row()
+            row.label(text="File Path", icon='FOLDER_REDIRECT')
+            row = box2.row()
+            row.prop(context.scene, "file_dir")
             
             row = box2.row()
-            row.operator("opr.set_object", icon='PREFERENCES')
+            row.operator("opr.import_object")
 
             row = box2.row()
             col1 = row.column(align=True)
@@ -87,10 +87,8 @@ class VIEW3D_PT_synthetic_image_generator(bpy.types.Panel):
             row3.prop(object, "rotation_euler", text="", index=2)
 
             row = box2.row()
-            row.operator("opr.auto_rotate", icon='EVENT_A')
-
+            row.operator("opr.default_rotation", icon='DRIVER_ROTATIONAL_DIFFERENCE')
             row = box2.row()
-            row.operator("opr.start_render", icon='RESTRICT_RENDER_OFF')
         
         box_out = layout.box()
 
@@ -104,15 +102,21 @@ class VIEW3D_PT_synthetic_image_generator(bpy.types.Panel):
         col2 = row.column()
         col1.label(text="Steps", icon='SPHERE')
         col2.prop(context.scene, "rotation_steps", text="")
-        
-        
 
+        row = box_out.row()
+        if scene.auto_exec:
+            row = box_out.row()
+            row.operator("opr.auto_execute", icon='RESTRICT_RENDER_OFF')
+            row = box_out.row()
 
+        if scene.manual_exec:
+            row = box_out.row()
+            row.operator("opr.start_render", icon='RESTRICT_RENDER_OFF')
+            row = box_out.row()
 
 
 #-------------------------------------------------------------------------#
 
-# Selecionar os objetos da cena
 class Select:
     def select_object(self, context):
         fixed_object_names = ['Camera', 'Light']
@@ -138,54 +142,9 @@ class Follow:
         light = bpy.data.objects.get('Light')
         constraint = light.constraints.new(type='TRACK_TO')
         constraint.target = object
-
-
-#-------------------------------------------------------------------------#
-
-class Opr_auto_execute(bpy.types.Operator, Select):
-    bl_idname = "opr.auto_execute"
-    bl_label = "Generate Images"
-
-
-    def execute(self, context):
-        object = bpy.context.active_object
-        bpy.data.objects.remove(object, do_unlink=True)
-        self.auto_import(context)
-        return {"FINISHED"}
-    
-    def auto_import(self, context):
-        object_path = context.scene.import_dir
-        
-        for file in os.listdir(object_path):
-            if file.endswith(".stl") or file.endswith(".STL"):
-                filepath = os.path.join(object_path, file)
-                bpy.ops.import_mesh.stl(filepath=filepath)
-
-                self.select_object(context)
-                bpy.ops.opr.set_object()
-                bpy.ops.opr.auto_rotate()
-                bpy.ops.opr.start_render()
-                object = bpy.context.active_object
-                bpy.data.objects.remove(object, do_unlink=True)
     
 
-# Aplica as orientações do objeto e da camera para um valor padrao
-class Opr_set_object(bpy.types.Operator, Select, Follow):
-    bl_idname = "opr.set_object"
-    bl_label = "Default Orientation"
-
-    def execute(self, context):
-        self.select_object(context)
-        self.set_origin(context)
-        self.set_light()
-        self.fit_distance_camera(context)
-        self.camera_follow_object(context)
-        self.light_follow_object(context)
-
-        return {"FINISHED"}
-
-
-    # Define a origem padrao no centro de massa do objeto
+class SetObject:
     def set_origin(self, context):
         object = context.object
         bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_MASS')
@@ -198,7 +157,6 @@ class Opr_set_object(bpy.types.Operator, Select, Follow):
         light.data.energy = 2
         light.data.use_shadow = False
 
-    # Ajusta a distancia da camera para o enquadramento
     def fit_distance_camera(self, context):
         object = context.object
         camera = context.scene.camera
@@ -232,15 +190,8 @@ class Opr_set_object(bpy.types.Operator, Select, Follow):
         clip_end = camera.location[0] * 4
         camera.data.clip_start = clip_start
         camera.data.clip_end = clip_end
-
-#-------------------------------------------------------------------------#
-
-# Operador para ajustar automaticamente uma orientacao
-class Opr_auto_rotate(bpy.types.Operator, Select):
-    bl_idname = "opr.auto_rotate"
-    bl_label = "Auto Rotate"
-
-    def execute(self, context):
+    
+    def auto_rotate(self, context):
         self.select_object(context)
         object = context.object
         rotation_angle = np.deg2rad(90)
@@ -280,6 +231,84 @@ class Opr_auto_rotate(bpy.types.Operator, Select):
                 object.rotation_euler.z = rotation_angle
         return {"FINISHED"}
 
+
+#-------------------------------------------------------------------------#
+
+# Operador para importar arquivos de uma pasta e aplicar as configuracoes iniciais no objeto
+class Opr_auto_execute(bpy.types.Operator, Select, Follow, SetObject):
+    bl_idname = "opr.auto_execute"
+    bl_label = "Generate Images"
+
+    def execute(self, context):
+        object = bpy.context.active_object
+        if object:
+            bpy.data.objects.remove(object, do_unlink=True)
+        self.auto_import(context)
+        return {"FINISHED"}
+    
+    def auto_import(self, context):
+        object_path = context.scene.import_dir
+        
+        for file in os.listdir(object_path):
+            if file.endswith(".stl") or file.endswith(".STL"):
+                filepath = os.path.join(object_path, file)
+                bpy.ops.import_mesh.stl(filepath=filepath)
+
+                self.select_object(context)
+                self.set_origin(context)
+                self.set_light()
+                self.fit_distance_camera(context)
+                self.camera_follow_object(context)
+                self.light_follow_object(context)
+                self.auto_rotate(context)
+                bpy.ops.opr.start_render()
+                object = bpy.context.active_object
+                bpy.data.objects.remove(object, do_unlink=True)
+
+
+ #-------------------------------------------------------------------------#   
+
+# Operador para aplicar as configuracoes iniciais no objeto
+class Opr_import_object(bpy.types.Operator, Select, Follow, SetObject):
+    bl_idname = "opr.import_object"
+    bl_label = "Import Object"
+
+    def execute(self, context):
+        object = bpy.context.active_object
+        if object:
+            bpy.data.objects.remove(object, do_unlink=True)
+        self.manual_import(context)
+        self.select_object(context)
+        self.set_origin(context)
+        self.set_light()
+        self.fit_distance_camera(context)
+        self.camera_follow_object(context)
+        self.light_follow_object(context)
+        self.auto_rotate(context)
+
+        return {"FINISHED"}
+    
+    def manual_import(self, context):
+        file = context.scene.file_dir
+        
+        if file.endswith(".stl") or file.endswith(".STL"):
+            bpy.ops.import_mesh.stl(filepath=file)
+
+
+#-------------------------------------------------------------------------#
+
+# Operador para aplicar as configuracoes iniciais no objeto
+class Opr_default_rotation(bpy.types.Operator, Select, SetObject):
+    bl_idname = "opr.default_rotation"
+    bl_label = "Default Rotation"
+
+    def execute(self, context):
+        self.select_object(context)
+        self.auto_rotate(context)
+
+        return {"FINISHED"}
+
+
 #-------------------------------------------------------------------------#
 
 # Operador para o usuario definir uma rotacao customizada
@@ -313,9 +342,10 @@ class Opr_custom_rotate(bpy.types.Operator, Select):
         elif axis == 'Z':
             object.rotation_euler.z += angle
 
+
 #-------------------------------------------------------------------------#
 
-# Inicia a renderização
+# Operador para iniciar a renderização
 class Opr_start_render(bpy.types.Operator, Follow, Select):
     bl_idname = "opr.start_render"
     bl_label = "Generate Images"
@@ -361,9 +391,9 @@ class Opr_start_render(bpy.types.Operator, Follow, Select):
 # Registradores
 def register():
     bpy.utils.register_class(VIEW3D_PT_synthetic_image_generator)
-    bpy.utils.register_class(Opr_set_object)
+    bpy.utils.register_class(Opr_import_object)
+    bpy.utils.register_class(Opr_default_rotation)
     bpy.utils.register_class(Opr_custom_rotate)
-    bpy.utils.register_class(Opr_auto_rotate)
     bpy.utils.register_class(Opr_start_render)
     bpy.utils.register_class(Opr_auto_execute)
     
@@ -383,7 +413,7 @@ def register():
         description="Directory to import single object",
         default="",
         maxlen=1024,
-        subtype='DIR_PATH'
+        subtype='FILE_PATH'
     )
     
     
@@ -404,9 +434,9 @@ def register():
 
 def unregister():
     bpy.utils.unregister_class(VIEW3D_PT_synthetic_image_generator)
-    bpy.utils.unregister_class(Opr_set_object)
+    bpy.utils.unregister_class(Opr_import_object)
+    bpy.utils.unregister_class(Opr_default_rotation)
     bpy.utils.unregister_class(Opr_custom_rotate)
-    bpy.utils.unregister_class(Opr_auto_rotate)
     bpy.utils.unregister_class(Opr_start_render)
     bpy.utils.unregister_class(Opr_auto_execute)
 
