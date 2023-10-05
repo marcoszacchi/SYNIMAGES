@@ -116,6 +116,7 @@ class VIEW3D_PT_synthetic_image_generator(bpy.types.Panel):
 
 #-------------------------------------------------------------------------#
 
+# 
 class Select:
     def select_object(self, context):
         fixed_object_names = ['Camera', 'Light']
@@ -416,7 +417,6 @@ def register():
         subtype='FILE_PATH'
     )
     
-    
     bpy.types.Scene.image_dir = bpy.props.StringProperty(
         name="",
         description="Directory to save images",
@@ -432,6 +432,10 @@ def register():
         default=36,
     )
 
+
+#-------------------------------------------------------------------------#
+
+# Desregistradores
 def unregister():
     bpy.utils.unregister_class(VIEW3D_PT_synthetic_image_generator)
     bpy.utils.unregister_class(Opr_import_object)
@@ -441,5 +445,8 @@ def unregister():
     bpy.utils.unregister_class(Opr_auto_execute)
 
 
+#-------------------------------------------------------------------------#
+
+# main
 if __name__ == "__main__":
     register()
